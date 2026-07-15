@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Plivo LLM Speedrun Summary</title>
+</head>
+<body>
+    <h1>Run Summary & Architecture</h1>
+    
+    <h2>Human Strategy & AI Assistance</h2>
+    <p>The core optimization strategies—diagnosing the Devanagari token bloat, engineering the learning rate curve, and conducting iterative capacity vs. convergence testing—were entirely human-led. AI coding assistants were utilized as syntax accelerators to draft standard boilerplate (e.g., the AdamW loop, Cosine Annealing math, and the BPE script structure), allowing me to focus exclusively on high-level architectural debugging and hyperparameter balancing.</p>
+    
+    <h2>Key Upgrades & Final Architecture</h2>
+    <ul>
+        <li><b>Engine:</b> Diagnosed the inefficiency of the baseline's constant LR. Engineered a custom Cosine Annealing schedule (100-step warmup, peak LR 1e-3) paired with AdamW and gradient clipping to force aggressive but stable convergence within the hard step limit.</li>
+        <li><b>Tokenizer:</b> Identified that 3-byte Devanagari characters were exhausting the context window. Designed and trained a custom BPE tokenizer (vocab limit: 512) to effectively compress the Hindi text while strictly maintaining the required lossless byte-level fallback.</li>
+        <li><b>Architecture:</b> Conducted rigorous empirical testing on parameter allocation. Concluded that a highly regularized, compact parameter configuration <b>(4 layers, 4 heads, 160 embd, tie_weights=False | 1.42M params)</b> vastly outperforms larger 1.9M+ parameter architectures that suffer from severe underfitting under the strict 2,000-step constraint.</li>
+    </ul>
+</body>
+</html>
