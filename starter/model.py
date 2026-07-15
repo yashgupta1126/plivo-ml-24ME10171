@@ -8,15 +8,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class Config:
-    vocab_size = 512      # Matches your custom BPE Tokenizer
-    block_size = 256      # Doubled context window!
-    n_layer = 4           # Must be 4 to stay under 2M cap
-    n_head = 6            # 192 is divisible by 6, perfect for attention
-    n_embd = 192          # Wider network
+    vocab_size = 512      # Matches your new BPE
+    block_size = 128
+    n_layer = 6           # Increased depth
+    n_head = 6            # Increased heads
+    n_embd = 192          # Increased width
     dropout = 0.0
-    tie_weights = True    # Reuses embedding weights for the output layer
+    tie_weights = True    # Shares embedding/output weights to save parameters
 
 
 class SelfAttention(nn.Module):
