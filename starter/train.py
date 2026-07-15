@@ -24,7 +24,7 @@ def main():
     ap.add_argument("--data", required=True)
     ap.add_argument("--steps", type=int, default=2000)
     ap.add_argument("--batch", type=int, default=8)
-    ap.add_argument("--lr", type=float, default=3e-3)  # Tripled from 1e-3
+    ap.add_argument("--lr", type=float, default=1e-3) # Boosted peak LR for Cosine Decay
     ap.add_argument("--seed", type=int, default=1337)
     ap.add_argument("--out", default="ckpt.pt")
     ap.add_argument("--log_every", type=int, default=100)
@@ -49,7 +49,7 @@ def main():
     # --- UPGRADED OPTIMIZER & SCHEDULER ---
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.1, betas=(0.9, 0.95))
     
-    def get_lr(step, max_steps, warmup_steps=50):      # Halved from 100
+    def get_lr(step, max_steps, warmup_steps=100):
         # 1. Linear warmup
         if step <= warmup_steps:
             return args.lr * (step / warmup_steps)

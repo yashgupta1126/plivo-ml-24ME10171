@@ -8,14 +8,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# best config of all tried
 class Config:
-    vocab_size = 512      # Matches your new BPE
+    vocab_size = 512      
     block_size = 128
-    n_layer = 6           # Increased depth
-    n_head = 6            # Increased heads
-    n_embd = 192          # Increased width
+    n_layer = 4
+    n_head = 4
+    n_embd = 160
     dropout = 0.0
-    tie_weights = True    # Shares embedding/output weights to save parameters
+    tie_weights = False
 
 
 class SelfAttention(nn.Module):
