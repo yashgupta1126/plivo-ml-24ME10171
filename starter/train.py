@@ -1,18 +1,8 @@
-"""Baseline trainer. It WORKS and it is MEDIOCRE ON PURPOSE. Your hour goes
-into changing what it does — schedule, init, optimizer, architecture,
-tokenizer — inside the hard caps.
-
-HARD CAPS (checked at grading, violations = disqualified run):
-  * max 2,000 optimizer steps in the run that produces your checkpoint
-  * max 2,000,000 total parameters
-  * training text: the provided train_corpus.txt only
-  * pure PyTorch / numpy / stdlib; no pretrained anything
-
-    python train.py --data ../data/train_corpus.txt --steps 2000 --out ckpt.pt
+"""Upgraded trainer with AdamW, Cosine Annealing, and Gradient Clipping.
 """
 import argparse
 import time
-
+import math
 import torch
 
 from model import GPT, Config
@@ -34,7 +24,7 @@ def main():
     ap.add_argument("--data", required=True)
     ap.add_argument("--steps", type=int, default=2000)
     ap.add_argument("--batch", type=int, default=8)
-    ap.add_argument("--lr", type=float, default=3e-4)
+    ap.add_argument("--lr", type=float, default=1e-3) # Boosted peak LR for Cosine Decay
     ap.add_argument("--seed", type=int, default=1337)
     ap.add_argument("--out", default="ckpt.pt")
     ap.add_argument("--log_every", type=int, default=100)
@@ -56,23 +46,42 @@ def main():
     print(f"model: {n:,} params")
     assert n <= MAX_PARAMS, f"cap: max {MAX_PARAMS:,} params"
 
-    # baseline choices, all questionable on purpose:
-    opt = torch.optim.Adam(model.parameters(), lr=args.lr)  # constant LR,
-    # no warmup, no schedule, no weight decay, no gradient clipping.
+    # --- UPGRADED OPTIMIZER & SCHEDULER ---
+    opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.1, betas=(0.9, 0.95))
+    
+    def get_lr(step, max_steps, warmup_steps=100):
+        # 1. Linear warmup
+        if step <= warmup_steps:
+            return args.lr * (step / warmup_steps)
+        # 2. Cosine decay down to 10% of max LR
+        decay_ratio = (step - warmup_steps) / (max_steps - warmup_steps)
+        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
+        return args.lr * 0.1 + args.lr * 0.9 * coeff
 
     model.train()
     t0 = time.time()
     losses = []
+    
     for step in range(1, args.steps + 1):
+        # Apply the learning rate scheduler
+        lr = get_lr(step, args.steps)
+        for param_group in opt.param_groups:
+            param_group['lr'] = lr
+
         x, y = get_batch(ids, cfg.block_size, args.batch, device)
         _, loss = model(x, y)
         opt.zero_grad(set_to_none=True)
         loss.backward()
+        
+        # Add gradient clipping to prevent exploding gradients
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        
         opt.step()
         losses.append(loss.item())
+        
         if step % args.log_every == 0 or step == 1:
             avg = sum(losses[-args.log_every:]) / len(losses[-args.log_every:])
-            print(f"step {step:5d}  loss {avg:.4f}  "
+            print(f"step {step:5d}  loss {avg:.4f}  lr {lr:.2e}  "
                   f"({(time.time()-t0)/step*1000:.0f} ms/step)")
 
     # every public config attribute is saved — if you add fields to Config,
